@@ -92,6 +92,7 @@ enum Expr
 	EEnum(name:String, fields:Array<EnumType>);
 	EDirectValue(value:Dynamic);
 	EUsing(name:String);
+	EClass(name:String, fields:Array<Expr>, ?extend:String, interfaces:Array<String>);
 }
 
 typedef Argument = {name: String, ?t: CType, ?opt: Bool, ?value: Expr};
@@ -171,6 +172,7 @@ enum Error
 	EInvalidIterator(v:String);
 	EInvalidOp(op:String);
 	EInvalidAccess(f:String);
+	EInvalidClass(name:String);
 	ECustom(msg:String);
 }
 

@@ -53,12 +53,14 @@ class Interp {
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
+	public var customClasses: Map<String, Dynamic>;
 
 	var locals: Map<String, LocalVar>;
 	var binops: Map<String, Expr->Expr->Dynamic>;
 	#else
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
+	public var customClasses: Hash<Dynamic>;
 
 	var locals: Hash<LocalVar>;
 	var binops: Hash<Expr->Expr->Dynamic>;
@@ -90,9 +92,11 @@ class Interp {
 		#if haxe3
 		variables = new Map<String, Dynamic>();
 		imports = new Map<String, Dynamic>();
+		customClasses = new Map<String, Dynamic>();
 		#else
 		variables = new Hash();
 		imports = new Hash();
+		customClasses = new Hash();
 		#end
 
 		variables.set("null", null);
@@ -396,6 +400,10 @@ class Interp {
 		if (imports.exists(id)) {
 			var v = imports.get(id);
 			return v;
+		}
+
+		if (customClasses.exists(id)) {
+			return customClasses.get(id);
 		}
 
 		error(EUnknownVariable(id));
@@ -761,6 +769,17 @@ class Interp {
 				return value;
 			case EUsing(name):
 				useUsing(name);
+			case EClass(name, fields, extend, interfaces):
+				if (customClasses.exists(name))
+					error(ECustom('Class "$name" is already defined.'));
+				inline function resolveClassName(thing: String): String {
+					if (thing == null) return null;
+					var resolved: Class<Any> = imports.exists(thing) ? cast imports.get(thing) : null;
+					if (resolved == null) resolved = variables.exists(thing) ? cast variables.get(thing) : null;
+					return resolved == null ? thing : Type.getClassName(resolved);
+				}
+				customClasses.set(name, new funkin.modding.scripting.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
+				variables.set(name, customClasses.get(name));
 		}
 		return null;
 	}
@@ -853,6 +872,8 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hget(f);
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -870,6 +891,8 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
@@ -990,9 +1013,17 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
+		if (customClasses.exists(cl)) {
+			var handler: Dynamic = customClasses.get(cl);
+			if ((handler is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor))
+				return cast(handler, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args);
+		}
 		var c = Type.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
-		return Type.createInstance(c, args);
+		if (c == null) error(EInvalidClass(cl));
+		return (c is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor)
+			? cast(c, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args)
+			: Type.createInstance(c, args);
 	}
 }

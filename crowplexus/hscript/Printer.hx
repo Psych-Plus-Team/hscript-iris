@@ -461,6 +461,12 @@ class Printer {
 			case EUsing(name):
 				add("using ");
 				add(name);
+			case EClass(name, fields, extend, interfaces):
+				add("class ");
+				add(name);
+				if (extend != null) { add(" extends "); add(extend); }
+				for (iface in interfaces) { add(" implements "); add(iface); }
+				add(" { /* scripted class */ }");
 		}
 	}
 
@@ -487,6 +493,7 @@ class Printer {
 			case EInvalidIterator(v): "Invalid iterator: " + v;
 			case EInvalidOp(op): "Invalid operator: " + op;
 			case EInvalidAccess(f): "Invalid access to field " + f;
+			case EInvalidClass(name): "Invalid or unknown class: " + name;
 			case ECustom(msg): msg;
 			default: "Unknown Error.";
 		};

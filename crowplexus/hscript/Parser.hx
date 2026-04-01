@@ -331,7 +331,7 @@ class Parser {
 		if (e == null)
 			return false;
 		return switch (expr(e)) {
-			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _): true;
+			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _), EClass(_, _, _, _): true;
 			case EFunction(_, e, _, _): isBlock(e);
 			case EVar(_, t, e, _): e != null ? isBlock(e) : t != null ? t.match(CTAnon(_)) : false;
 			case EIf(_, e1, e2): if (e2 != null) isBlock(e2) else isBlock(e1);
@@ -967,6 +967,51 @@ class Parser {
 						error(ECustom("Typedef, unknown type " + t), tokenMin, tokenMax);
 						null;
 				}
+
+			case "class":
+				var tk = token();
+				var name = null;
+				switch (tk) {
+					case TId(id): name = id;
+					default: push(tk);
+				}
+				var extend: String = null;
+				var interfaces: Array<String> = [];
+				while (true) {
+					var t = token();
+					switch (t) {
+						case TId("extends"):
+							var e = parseType();
+							switch (e) {
+								case CTPath(tp):
+									if (extend != null)
+										error(ECustom("Cannot extend a class twice."), tokenMin, tokenMax);
+									extend = (tp.pack != null && tp.pack.length > 0 ? tp.pack.join(".") + "." : "") + tp.name;
+								default:
+									error(ECustom("Invalid extends path."), tokenMin, tokenMax);
+							}
+						case TId("implements"):
+							var e = parseType();
+							switch (e) {
+								case CTPath(tp):
+									interfaces.push((tp.pack != null && tp.pack.length > 0 ? tp.pack.join(".") + "." : "") + tp.name);
+								default:
+									error(ECustom("Invalid implements path."), tokenMin, tokenMax);
+							}
+						default:
+							push(t);
+							break;
+					}
+				}
+				var fields = [];
+				ensure(TBrOpen);
+				while (!maybe(TBrClose)) {
+					var tk = token();
+					if (tk == TSemicolon) continue;
+					push(tk);
+					fields.push(parseExpr());
+				}
+				mk(EClass(name, fields, extend, interfaces));
 
 			case "using":
 				var path = parsePath();
