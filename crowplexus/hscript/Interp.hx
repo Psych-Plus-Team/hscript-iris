@@ -569,8 +569,14 @@ class Interp {
 					var old = me.locals, depth = me.depth;
 					me.depth++;
 					me.locals = me.duplicate(capturedLocals);
-					for (i in 0...params.length)
-						me.locals.set(params[i].name, {r: args[i], const: false});
+					for (i in 0...params.length) {
+						var p = params[i];
+						// If the arg was omitted (null) and the param has a default value expression, evaluate it
+						var v:Dynamic = args[i];
+						if (v == null && p.opt && p.value != null)
+							v = me.expr(p.value);
+						me.locals.set(p.name, {r: v, const: false});
+					}
 					var r = null;
 					var oldDecl = declared.length;
 					if (inTry)

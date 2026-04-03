@@ -1109,8 +1109,10 @@ class Parser {
 				if (allowTypes) {
 					if (maybe(TDoubleDot))
 						arg.t = parseType();
-					if (maybe(TOp("=")))
+					if (maybe(TOp("="))) {
 						arg.value = parseExpr();
+						arg.opt = true; // params with default values are optional
+					}
 				}
 				tk = token();
 				switch (tk) {
