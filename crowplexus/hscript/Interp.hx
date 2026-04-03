@@ -268,13 +268,11 @@ class Interp {
 							error(ECustom("Cannot reassign final, for constant expression -> " + id));
 					}
 				}
-				if (l == null) {
-					if (prefix) {
-						v += delta;
-						setTo(v);
-					} else
-						setTo(v + delta);
-				}
+				if (prefix) {
+					v += delta;
+					setTo(v);
+				} else
+					setTo(v + delta);
 				return v;
 			case EField(e, f, s):
 				var obj = expr(e);
