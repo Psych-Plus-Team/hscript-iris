@@ -84,12 +84,74 @@ class Iris {
 	**/
 	@:unreflective public static var proxyImports: Map<String, Dynamic> = ["Type" => ProxyType];
 
+	/**
+	 * Exact import redirects, useful for backwards compatibility.
+	 * Example: "psychlua.LuaUtils" -> "funkin.modding.scripting.psychlua.LuaUtils"
+	**/
+	@:unreflective public static var importRedirects: Map<String, String> = [];
+
+	/**
+	 * Optional namespace fallbacks when importing unqualified names.
+	 * Example: importing "FlxText" can resolve to "flixel.text.FlxText".
+	**/
+	@:unreflective public static var importSearchPaths: Array<String> = [
+		"flixel",
+		"flixel.addons",
+		"flixel.text",
+		"flixel.util",
+		"flixel.math",
+		"flixel.group",
+		"flixel.tweens",
+		"flixel.effects",
+		"openfl",
+		"openfl.display",
+		"openfl.filters",
+		"openfl.geom",
+		"openfl.text",
+		"openfl.utils",
+		"lime",
+		"haxe",
+		"haxe.ds",
+		"haxe.io"
+	];
+
 	public static function addBlocklistImport(name: String): Void {
 		blocklistImports.push(name);
 	}
 
 	public static function addProxyImport(name: String, value: Dynamic): Void {
 		proxyImports.set(name, value);
+	}
+
+	public static function addImportRedirect(from: String, to: String): Void {
+		importRedirects.set(from, to);
+	}
+
+	public static function addImportSearchPath(path: String): Void {
+		if (path != null && path.length > 0 && !importSearchPaths.contains(path)) {
+			importSearchPaths.push(path);
+		}
+	}
+
+	public static function resolveImportPath(name: String): String {
+		if (name == null || name.length == 0)
+			return name;
+
+		if (importRedirects.exists(name)) {
+			return importRedirects.get(name);
+		}
+
+		// If already qualified, do not auto-expand by namespace.
+		if (name.indexOf(".") != -1)
+			return name;
+
+		for (path in importSearchPaths) {
+			var candidate = path + "." + name;
+			if (Tools.getClass(candidate) != null)
+				return candidate;
+		}
+
+		return name;
 	}
 
 	public static function getProxiedImport(name: String): Dynamic {

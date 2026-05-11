@@ -412,7 +412,17 @@ class Interp {
 	public function getOrImportClass(name: String): Dynamic {
 		if (Iris.proxyImports.exists(name))
 			return Iris.proxyImports.get(name);
-		return Tools.getClass(name);
+
+		var resolvedName = Iris.resolveImportPath(name);
+		if (Iris.proxyImports.exists(resolvedName))
+			return Iris.proxyImports.get(resolvedName);
+
+		var resolvedClass = Tools.getClass(resolvedName);
+		if (resolvedClass != null)
+			return resolvedClass;
+
+		// Last fallback to original name for edge-cases where resolution changed unexpectedly.
+		return (resolvedName != name) ? Tools.getClass(name) : null;
 	}
 
 	public function expr(e: Expr): Dynamic {
@@ -513,8 +523,10 @@ class Interp {
 				throw SReturn;
 			case EImport(v, as):
 				final aliasStr = (as != null ? " named " + as : ""); // for errors
-				if (Iris.blocklistImports.contains(v)) {
-					error(ECustom("You cannot add a blacklisted import, for class " + v + aliasStr));
+				var resolvedImportName = Iris.resolveImportPath(v);
+
+				if (Iris.blocklistImports.contains(v) || Iris.blocklistImports.contains(resolvedImportName)) {
+					error(ECustom("You cannot add a blacklisted import, for class " + resolvedImportName + aliasStr));
 					return null;
 				}
 
@@ -524,7 +536,7 @@ class Interp {
 
 				var c: Dynamic = getOrImportClass(v);
 				if (c == null) // if it's still null then throw an error message.
-					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
+					return warn(ECustom("Import" + aliasStr + " of class " + resolvedImportName + " could not be added"));
 				else {
 					imports.set(n, c);
 					if (as != null)
