@@ -766,6 +766,9 @@ class Parser {
 								switch (tk) {
 									case TComma:
 										// next expr
+									case TOp("|"):
+										// Haxe switch alternatives use `|`, but hscript only split on commas here.
+										// Treat it as another case-value separator so `case 'a' | 'b':` matches correctly.
 									case TId("if"):
 										// if( Type.enumEq(e, EIdent("_")) )
 										//	unexpected(TId("if"));
