@@ -794,7 +794,7 @@ class Interp {
 					if (resolved == null) resolved = variables.exists(thing) ? cast variables.get(thing) : null;
 					return resolved == null ? thing : Type.getClassName(resolved);
 				}
-				customClasses.set(name, new funkin.modding.scripting.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
+				customClasses.set(name, new psychlua.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
 				variables.set(name, customClasses.get(name));
 		}
 		return null;
@@ -888,8 +888,8 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hget(f);
+		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hget(f);
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -907,8 +907,8 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
+		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
@@ -1031,15 +1031,15 @@ class Interp {
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
 		if (customClasses.exists(cl)) {
 			var handler: Dynamic = customClasses.get(cl);
-			if ((handler is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor))
-				return cast(handler, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args);
+			if ((handler is psychlua.ScriptedClass.IScriptCustomConstructor))
+				return cast(handler, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args);
 		}
 		var c = Type.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
 		if (c == null) error(EInvalidClass(cl));
-		return (c is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor)
-			? cast(c, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args)
+		return (c is psychlua.ScriptedClass.IScriptCustomConstructor)
+			? cast(c, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args)
 			: Type.createInstance(c, args);
 	}
 }
