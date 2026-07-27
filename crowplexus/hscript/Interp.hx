@@ -786,6 +786,7 @@ class Interp {
 			case EUsing(name):
 				useUsing(name);
 			case EClass(name, fields, extend, interfaces):
+				#if custom_classes
 				if (customClasses.exists(name))
 					error(ECustom('Class "$name" is already defined.'));
 				inline function resolveClassName(thing: String): String {
@@ -794,8 +795,11 @@ class Interp {
 					if (resolved == null) resolved = variables.exists(thing) ? cast variables.get(thing) : null;
 					return resolved == null ? thing : Type.getClassName(resolved);
 				}
-				customClasses.set(name, new funkin.modding.scripting.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
+				customClasses.set(name, new psychlua.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
 				variables.set(name, customClasses.get(name));
+				#else
+				error(ECustom('Custom classes require the "custom-classes" haxedef.'));
+				#end
 		}
 		return null;
 	}
@@ -888,8 +892,10 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hget(f);
+		#if custom_classes
+		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hget(f);
+		#end
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -907,8 +913,10 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if ((o is funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, funkin.modding.scripting.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
+		#if custom_classes
+		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
+		#end
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
@@ -1029,17 +1037,23 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
+		#if custom_classes
 		if (customClasses.exists(cl)) {
 			var handler: Dynamic = customClasses.get(cl);
-			if ((handler is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor))
-				return cast(handler, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args);
+			if ((handler is psychlua.ScriptedClass.IScriptCustomConstructor))
+				return cast(handler, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args);
 		}
+		#end
 		var c = Type.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
 		if (c == null) error(EInvalidClass(cl));
-		return (c is funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor)
-			? cast(c, funkin.modding.scripting.ScriptedClass.IScriptCustomConstructor).hnew(args)
+		#if custom_classes
+		return (c is psychlua.ScriptedClass.IScriptCustomConstructor)
+			? cast(c, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args)
 			: Type.createInstance(c, args);
+		#else
+		return Type.createInstance(c, args);
+		#end
 	}
 }
