@@ -219,6 +219,10 @@ class Parser {
 	}
 
 	public function parseString(s: String, ?origin: String = "hscript") {
+		// A Parser may be reused for several Polymod classes. Each source file
+		// starts at line 1; carrying the previous file's line count corrupts
+		// runtime diagnostics and trace positions.
+		line = 1;
 		initParser(origin);
 		input = s;
 		readPos = 0;

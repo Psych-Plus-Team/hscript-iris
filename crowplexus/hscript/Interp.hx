@@ -29,6 +29,7 @@ import crowplexus.iris.Iris;
 import crowplexus.iris.IrisUsingClass;
 import crowplexus.iris.utils.UsingEntry;
 import haxe.Constraints.IMap;
+import haxe.ds.ObjectMap;
 import haxe.PosInfos;
 
 private enum Stop {
@@ -50,6 +51,7 @@ class DeclaredVar {
 }
 
 class Interp {
+	var compatibilityFields:ObjectMap<Dynamic, Map<String, Dynamic>>;
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
@@ -78,6 +80,7 @@ class Interp {
 	public var showPosOnLog: Bool = true;
 
 	public function new() {
+		compatibilityFields = new ObjectMap();
 		#if haxe3
 		locals = new Map();
 		#else
@@ -165,7 +168,16 @@ class Interp {
 		assignOp("??" + "=", function(v1, v2) return v1 == null ? v2 : v1);
 	}
 
-	public inline function setVar(name: String, v: Dynamic) {
+	public function setVar(name: String, v: Dynamic) {
+		#if custom_classes
+		if (!variables.exists(name)) {
+			var self:Dynamic = variables.get("this");
+			if (self != null && (self is psychlua.ScriptedClass.IScriptCustomBehaviour)) {
+				cast(self, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(name, v);
+				return;
+			}
+		}
+		#end
 		variables.set(name, v);
 	}
 
@@ -403,6 +415,15 @@ class Interp {
 		if (customClasses.exists(id)) {
 			return customClasses.get(id);
 		}
+
+		#if custom_classes
+		var self:Dynamic = variables.get("this");
+		if (self != null && (self is psychlua.ScriptedClass.IScriptCustomBehaviour)) {
+			try {
+				return cast(self, psychlua.ScriptedClass.IScriptCustomBehaviour).hget(id);
+			} catch (_:Dynamic) {}
+		}
+		#end
 
 		error(EUnknownVariable(id));
 
@@ -905,7 +926,12 @@ class Interp {
 				Reflect.field(o, f);
 			}
 			#else
-			Reflect.getProperty(o, f);
+			try {
+				Reflect.getProperty(o, f);
+			} catch (e:Dynamic) {
+				var fields = compatibilityFields.get(o);
+				if (fields != null && fields.exists(f)) fields.get(f) else throw e;
+			}
 			#end
 		}
 	}
@@ -917,7 +943,19 @@ class Interp {
 		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
 			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
 		#end
-		Reflect.setProperty(o, f, v);
+		try {
+			Reflect.setProperty(o, f, v);
+		} catch (e:Dynamic) {
+			// V-Slice exposes zIndex on every drawable. Flixel only has it on
+			// selected Plus Engine wrappers, so preserve it as a script field.
+			if (f != "zIndex") throw e;
+			var fields = compatibilityFields.get(o);
+			if (fields == null) {
+				fields = new Map();
+				compatibilityFields.set(o, fields);
+			}
+			fields.set(f, v);
+		}
 		return v;
 	}
 
