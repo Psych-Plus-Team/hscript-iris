@@ -172,8 +172,8 @@ class Interp {
 		#if custom_classes
 		if (!variables.exists(name)) {
 			var self:Dynamic = variables.get("this");
-			if (self != null && (self is psychlua.ScriptedClass.IScriptCustomBehaviour)) {
-				cast(self, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(name, v);
+			if (self != null && (self is psychlua.backend.ScriptedClass.IScriptCustomBehaviour)) {
+				cast(self, psychlua.backend.ScriptedClass.IScriptCustomBehaviour).hset(name, v);
 				return;
 			}
 		}
@@ -418,9 +418,9 @@ class Interp {
 
 		#if custom_classes
 		var self:Dynamic = variables.get("this");
-		if (self != null && (self is psychlua.ScriptedClass.IScriptCustomBehaviour)) {
+		if (self != null && (self is psychlua.backend.ScriptedClass.IScriptCustomBehaviour)) {
 			try {
-				return cast(self, psychlua.ScriptedClass.IScriptCustomBehaviour).hget(id);
+				return cast(self, psychlua.backend.ScriptedClass.IScriptCustomBehaviour).hget(id);
 			} catch (_:Dynamic) {}
 		}
 		#end
@@ -816,7 +816,7 @@ class Interp {
 					if (resolved == null) resolved = variables.exists(thing) ? cast variables.get(thing) : null;
 					return resolved == null ? thing : Type.getClassName(resolved);
 				}
-				customClasses.set(name, new psychlua.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
+				customClasses.set(name, new psychlua.backend.ScriptedClass.ScriptClassHandler(this, name, fields, resolveClassName(extend), [for (iface in interfaces) resolveClassName(iface)]));
 				variables.set(name, customClasses.get(name));
 				#else
 				error(ECustom('Custom classes require the "custom-classes" haxedef.'));
@@ -914,8 +914,8 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 		#if custom_classes
-		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hget(f);
+		if ((o is psychlua.backend.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.backend.ScriptedClass.IScriptCustomBehaviour).hget(f);
 		#end
 		return {
 			#if php
@@ -940,8 +940,8 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 		#if custom_classes
-		if ((o is psychlua.ScriptedClass.IScriptCustomBehaviour))
-			return cast(o, psychlua.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
+		if ((o is psychlua.backend.ScriptedClass.IScriptCustomBehaviour))
+			return cast(o, psychlua.backend.ScriptedClass.IScriptCustomBehaviour).hset(f, v);
 		#end
 		try {
 			Reflect.setProperty(o, f, v);
@@ -1078,8 +1078,8 @@ class Interp {
 		#if custom_classes
 		if (customClasses.exists(cl)) {
 			var handler: Dynamic = customClasses.get(cl);
-			if ((handler is psychlua.ScriptedClass.IScriptCustomConstructor))
-				return cast(handler, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args);
+			if ((handler is psychlua.backend.ScriptedClass.IScriptCustomConstructor))
+				return cast(handler, psychlua.backend.ScriptedClass.IScriptCustomConstructor).hnew(args);
 		}
 		#end
 		var c = Type.resolveClass(cl);
@@ -1087,8 +1087,8 @@ class Interp {
 			c = resolve(cl);
 		if (c == null) error(EInvalidClass(cl));
 		#if custom_classes
-		return (c is psychlua.ScriptedClass.IScriptCustomConstructor)
-			? cast(c, psychlua.ScriptedClass.IScriptCustomConstructor).hnew(args)
+		return (c is psychlua.backend.ScriptedClass.IScriptCustomConstructor)
+			? cast(c, psychlua.backend.ScriptedClass.IScriptCustomConstructor).hnew(args)
 			: Type.createInstance(c, args);
 		#else
 		return Type.createInstance(c, args);
